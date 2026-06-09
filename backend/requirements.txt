@@ -1,0 +1,14 @@
+fastapi>=0.115,<0.116
+uvicorn[standard]>=0.32,<0.33
+pydantic>=2.9,<3
+pydantic-settings>=2.6,<3
+sqlalchemy>=2.0,<3
+asyncpg>=0.30,<0.31
+alembic>=1.14,<2
+python-multipart>=0.0.20
+openpyxl>=3.1,<4
+secure>=1.0,<2
+python-json-logger>=2.0,<3
+httpx>=0.28,<0.29
+pytest>=8,<9
+pytest-asyncio>=0.24,<0.25

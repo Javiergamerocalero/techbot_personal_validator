@@ -1,0 +1,170 @@
+{
+  "info": {
+    "name": "Qapp Employee Validation Service",
+    "description": "Endpoints para validar y administrar empleados autorizados a comprar en quioscos Qapp. Multi-tenant via X-Tenant-Key. Endpoints administrativos via X-Admin-Token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8001/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "tenant_key",
+      "value": "REPLACE_WITH_TENANT_API_KEY",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "REPLACE_WITH_ADMIN_TOKEN",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+      }
+    },
+    {
+      "name": "Tenants",
+      "item": [
+        {
+          "name": "Create tenant (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Admin-Token", "value": "{{admin_token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"San Fernando\",\n  \"slug\": \"san-fernando\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/tenants", "host": ["{{base_url}}"], "path": ["tenants"] }
+          }
+        },
+        {
+          "name": "List tenants (admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Admin-Token", "value": "{{admin_token}}", "type": "text" }],
+            "url": { "raw": "{{base_url}}/tenants", "host": ["{{base_url}}"], "path": ["tenants"] }
+          }
+        },
+        {
+          "name": "Rotate tenant key (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "X-Admin-Token", "value": "{{admin_token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/tenants/1/rotate",
+              "host": ["{{base_url}}"],
+              "path": ["tenants", "1", "rotate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "Validate by DNI",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Tenant-Key", "value": "{{tenant_key}}", "type": "text" },
+              { "key": "X-Kiosk-Name", "value": "KIOSCO-SF-01", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifierType\": \"DNI\",\n  \"identifier\": \"12345678\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/employees/validate",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "validate"]
+            }
+          }
+        },
+        {
+          "name": "Validate by employee code",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Tenant-Key", "value": "{{tenant_key}}", "type": "text" },
+              { "key": "X-Kiosk-Name", "value": "KIOSCO-SF-01", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifierType\": \"EMPLOYEE_CODE\",\n  \"identifier\": \"SF001245\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/employees/validate",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "validate"]
+            }
+          }
+        },
+        {
+          "name": "Download template.xlsx",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Tenant-Key", "value": "{{tenant_key}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/employees/template.xlsx",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "template.xlsx"]
+            }
+          }
+        },
+        {
+          "name": "Import employees (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "X-Tenant-Key", "value": "{{tenant_key}}", "type": "text" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "Excel .xlsx con headers employee_code, document_number, document_type, full_name, status, status_reason, cost_center"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/employees/import",
+              "host": ["{{base_url}}"],
+              "path": ["employees", "import"]
+            }
+          }
+        },
+        {
+          "name": "List employees (paginated)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Tenant-Key", "value": "{{tenant_key}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/employees?limit=50&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["employees"],
+              "query": [
+                { "key": "limit", "value": "50" },
+                { "key": "offset", "value": "0" },
+                { "key": "q", "value": "", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
