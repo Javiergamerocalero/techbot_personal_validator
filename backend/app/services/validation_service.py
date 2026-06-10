@@ -49,7 +49,7 @@ async def validate_employee(
             success=False, employee=None, message=_MSG_NOT_AUTHORIZED
         )
 
-    if not employee.status:
+    if not employee.is_authorized:
         await _log(
             session,
             tenant_id=tenant_id,

@@ -1,19 +1,28 @@
 """Employee + enums asociados.
 
-Schema simplificado tras feedback de Javier 2026-06-09:
-- `tenant_id` queda como int simple (sin FK) — Qapp manda el
-  tenant_id en cada request, no hay tabla `tenants` que validar.
-- `status_reason` reducido a ACTIVE / INACTIVE (era catálogo de 5
-  valores; el cliente prefiere no complicar).
-- Búsqueda principal por (tenant_id, document_number) y
-  (tenant_id, employee_code).
+Schema definitivo confirmado por Javier 2026-06-09 21:03:
+- id (autogenerado)
+- tenant_id
+- tenant_name (varchar 100, nullable)
+- employee_code
+- document_number
+- document_type (enum DNI/CE/PASSPORT)
+- full_name (varchar 100)
+- status: STRING "Active" / "Inactive"
+  (la flag de autorización se evalúa por igualdad con "Active")
+- status_reason: varchar(100) nullable, texto libre
+  (describe POR QUÉ está Inactive, ej. "Vacaciones desde X")
+- created_at, updated_at
+
+Búsqueda principal por (tenant_id, document_number) y
+(tenant_id, employee_code). Sin FK a `tenants` — Qapp manda el
+tenant_id en cada request.
 """
 import enum
 from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
-    Boolean,
     DateTime,
     Enum,
     Index,
@@ -33,11 +42,10 @@ class DocumentType(str, enum.Enum):
     PASSPORT = "PASSPORT"
 
 
-class StatusReason(str, enum.Enum):
-    """Catálogo cerrado, confirmado por Javier 2026-06-09."""
-
-    ACTIVE = "ACTIVE"
-    INACTIVE = "INACTIVE"
+# Constantes para `status` — string libre con dos valores válidos.
+STATUS_ACTIVE = "Active"
+STATUS_INACTIVE = "Inactive"
+VALID_STATUSES = (STATUS_ACTIVE, STATUS_INACTIVE)
 
 
 class Employee(Base):
@@ -45,9 +53,6 @@ class Employee(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
 
-    # Sin FK: Qapp identifica al tenant y lo manda en el body del
-    # request. Si necesitamos rastrear orígenes de cada tenant
-    # agregamos una tabla separada después.
     tenant_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     tenant_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
@@ -61,16 +66,12 @@ class Employee(Base):
 
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    status: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default=STATUS_ACTIVE
     )
-    status_reason: Mapped[StatusReason] = mapped_column(
-        Enum(StatusReason, name="status_reason", native_enum=False),
-        nullable=False,
-        default=StatusReason.ACTIVE,
+    status_reason: Mapped[str | None] = mapped_column(
+        String(100), nullable=True
     )
-
-    cost_center: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -81,6 +82,11 @@ class Employee(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+    @property
+    def is_authorized(self) -> bool:
+        """True si el empleado puede comprar (status normalizado a Active)."""
+        return (self.status or "").strip().lower() == STATUS_ACTIVE.lower()
 
     __table_args__ = (
         UniqueConstraint(

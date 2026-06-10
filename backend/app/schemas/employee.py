@@ -1,22 +1,27 @@
-"""Pydantic schemas para Employee."""
+"""Pydantic schemas para Employee.
+
+Confirmado con Javier 2026-06-09 21:03:
+- `status` es string ("Active" / "Inactive").
+- `status_reason` es varchar libre nullable (motivo del Inactive).
+- Sin `cost_center`.
+"""
 from datetime import datetime
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.models.employee import DocumentType, StatusReason
+from app.models.employee import (
+    STATUS_ACTIVE,
+    STATUS_INACTIVE,
+    DocumentType,
+)
 from app.models.validation_log import IdentifierType
 
 
 # ── In ──────────────────────────────────────────────────────────────────
 class ValidateRequest(BaseModel):
-    """Lo que manda Qapp para validar un empleado.
+    """Body del POST /employees/validate consumido por Qapp.
 
-    Post-cambio Javier 2026-06-09: el tenant_id viene en el body
-    (antes se derivaba de X-Tenant-Key). El endpoint queda público
-    porque Qapp ya asegura la comunicación desde su lado.
-
-    Body shape:
         {
           "tenantId": 22,
           "identifierType": "DNI",
@@ -41,9 +46,8 @@ class EmployeeOut(BaseModel):
     employee_code: str = Field(alias="employeeCode")
     document_number: str = Field(alias="documentNumber")
     full_name: str = Field(alias="fullName")
-    status: bool
-    status_reason: StatusReason = Field(alias="statusReason")
-    cost_center: str | None = Field(default=None, alias="costCenter")
+    status: str
+    status_reason: str | None = Field(default=None, alias="statusReason")
     tenant_name: str | None = Field(default=None, alias="tenantName")
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
@@ -65,9 +69,8 @@ class EmployeeListItem(BaseModel):
     document_number: str = Field(alias="documentNumber")
     document_type: DocumentType = Field(alias="documentType")
     full_name: str = Field(alias="fullName")
-    status: bool
-    status_reason: StatusReason = Field(alias="statusReason")
-    cost_center: str | None = Field(default=None, alias="costCenter")
+    status: str
+    status_reason: str | None = Field(default=None, alias="statusReason")
     updated_at: datetime = Field(alias="updatedAt")
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
@@ -86,10 +89,24 @@ class EmployeeImportRow(BaseModel):
     document_number: str
     document_type: DocumentType = DocumentType.DNI
     full_name: str
-    status: bool = True
-    status_reason: StatusReason = StatusReason.ACTIVE
-    cost_center: str | None = None
+    status: str = STATUS_ACTIVE
+    status_reason: str | None = None
     tenant_name: str | None = None
+
+    @field_validator("status")
+    @classmethod
+    def _normalize_status(cls, v: str) -> str:
+        """Acepta variantes case-insensitive ("active", "ACTIVE", etc.)
+        y las normaliza a 'Active' / 'Inactive'. Rechaza otros valores.
+        """
+        clean = (v or "").strip().lower()
+        if clean in {"active", "activo", "a", "1", "true"}:
+            return STATUS_ACTIVE
+        if clean in {"inactive", "inactivo", "i", "0", "false"}:
+            return STATUS_INACTIVE
+        raise ValueError(
+            f"status debe ser 'Active' o 'Inactive' (recibido: {v!r})"
+        )
 
 
 class ImportError(BaseModel):

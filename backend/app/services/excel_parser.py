@@ -1,8 +1,11 @@
 """Parseo + validación de filas del Excel de empleados.
 
-Se hace en memoria con `openpyxl` (read-only mode). Si el archivo es
-gigantesco (> 50k filas) podemos pasar a streaming, pero para San
-Fernando el orden de magnitud es 1k-10k.
+Schema confirmado con Javier 2026-06-09 21:03 — columnas:
+employee_code, document_number, document_type, full_name, status,
+status_reason, tenant_name. Sin cost_center.
+
+`status` se acepta como string libre ("Active" / "Inactive") con
+normalización case-insensitive en el Pydantic schema.
 """
 import io
 from typing import IO
@@ -13,7 +16,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 from pydantic import ValidationError
 
-from app.models.employee import DocumentType, StatusReason
+from app.models.employee import DocumentType, STATUS_ACTIVE, STATUS_INACTIVE
 from app.schemas.employee import (
     EmployeeImportRow,
     ImportError as ImportErrorSchema,
@@ -27,27 +30,25 @@ HEADERS = [
     "full_name",
     "status",
     "status_reason",
-    "cost_center",
     "tenant_name",
 ]
 
 _DOC_TYPES = [t.value for t in DocumentType]
-_STATUS_REASONS = [r.value for r in StatusReason]
+_STATUSES = [STATUS_ACTIVE, STATUS_INACTIVE]
 
 
 def build_template_xlsx() -> bytes:
-    """Genera el `.xlsx` plantilla — headers + hoja de catálogos.
+    """Genera el `.xlsx` plantilla.
 
-    La hoja "Catalogos" muestra los valores válidos de los enums.
-    En la hoja principal hay data validation que limita las celdas
-    correspondientes a esos valores.
+    Hoja "Empleados" con headers, fila de ejemplo y data validation
+    en columnas de enums (document_type, status). Hoja "Catalogos"
+    muestra los valores válidos.
     """
     wb = Workbook()
     ws = wb.active
     assert ws is not None
     ws.title = "Empleados"
 
-    # Headers con formato
     header_fill = PatternFill(
         start_color="222B57", end_color="222B57", fill_type="solid"
     )
@@ -61,40 +62,41 @@ def build_template_xlsx() -> bytes:
             len(header) + 4, 18
         )
 
-    # Hoja de catálogos
     cat_ws = wb.create_sheet(title="Catalogos")
     cat_ws.cell(row=1, column=1, value="document_type").font = Font(bold=True)
-    cat_ws.cell(row=1, column=2, value="status_reason").font = Font(bold=True)
+    cat_ws.cell(row=1, column=2, value="status").font = Font(bold=True)
     for i, v in enumerate(_DOC_TYPES, start=2):
         cat_ws.cell(row=i, column=1, value=v)
-    for i, v in enumerate(_STATUS_REASONS, start=2):
+    for i, v in enumerate(_STATUSES, start=2):
         cat_ws.cell(row=i, column=2, value=v)
 
-    # Data validation en columnas C (document_type) y F (status_reason)
+    # Data validation:
+    # - Columna C (3) = document_type
+    # - Columna E (5) = status
     dv_doctype = DataValidation(
-        type="list", formula1=f'"{",".join(_DOC_TYPES)}"', allow_blank=True
-    )
-    dv_doctype.add(f"C2:C1048576")
-    ws.add_data_validation(dv_doctype)
-
-    dv_reason = DataValidation(
         type="list",
-        formula1=f'"{",".join(_STATUS_REASONS)}"',
+        formula1=f'"{",".join(_DOC_TYPES)}"',
         allow_blank=True,
     )
-    dv_reason.add(f"F2:F1048576")
-    ws.add_data_validation(dv_reason)
+    dv_doctype.add("C2:C1048576")
+    ws.add_data_validation(dv_doctype)
 
-    # Fila de ejemplo
+    dv_status = DataValidation(
+        type="list",
+        formula1=f'"{",".join(_STATUSES)}"',
+        allow_blank=True,
+    )
+    dv_status.add("E2:E1048576")
+    ws.add_data_validation(dv_status)
+
     ws.append(
         [
             "SF000001",
             "12345678",
             "DNI",
             "Juan Perez Lopez",
-            True,
-            "ACTIVE",
-            "PLANTA CHORRILLOS",
+            STATUS_ACTIVE,
+            "",  # status_reason vacío cuando está Active
             "San Fernando",
         ]
     )
@@ -108,11 +110,6 @@ def build_template_xlsx() -> bytes:
 def parse_xlsx(
     file_bytes: bytes | IO[bytes],
 ) -> tuple[list[EmployeeImportRow], list[ImportErrorSchema]]:
-    """Lee un .xlsx y devuelve (filas válidas, errores).
-
-    El caller decide qué hacer con las filas válidas (insertar / upsert).
-    Las filas con error se reportan al frontend para corrección.
-    """
     if isinstance(file_bytes, (bytes, bytearray)):
         stream: IO[bytes] = io.BytesIO(file_bytes)
     else:
@@ -168,7 +165,7 @@ def parse_xlsx(
 
     for row_num, row in enumerate(rows_iter, start=2):
         if row is None or all(c in (None, "") for c in row):
-            continue  # fila vacía
+            continue
         try:
             data = {
                 "employee_code": _str_or_none(row[header_map["employee_code"]]),
@@ -179,11 +176,10 @@ def parse_xlsx(
                     row[header_map["document_type"]], "DNI"
                 ),
                 "full_name": _str_or_none(row[header_map["full_name"]]),
-                "status": _to_bool(row[header_map["status"]]),
-                "status_reason": _str_or_default(
-                    row[header_map["status_reason"]], "ACTIVE"
+                "status": _str_or_default(row[header_map["status"]], "Active"),
+                "status_reason": _str_or_none(
+                    row[header_map["status_reason"]]
                 ),
-                "cost_center": _str_or_none(row[header_map["cost_center"]]),
                 "tenant_name": _str_or_none(row[header_map["tenant_name"]]),
             }
             parsed = EmployeeImportRow.model_validate(data)
@@ -218,18 +214,3 @@ def _str_or_none(v) -> str | None:  # noqa: ANN001
 def _str_or_default(v, default: str) -> str:  # noqa: ANN001
     s = _str_or_none(v)
     return s if s is not None else default
-
-
-def _to_bool(v) -> bool:  # noqa: ANN001
-    if isinstance(v, bool):
-        return v
-    if v is None:
-        return True
-    if isinstance(v, (int, float)):
-        return bool(v)
-    s = str(v).strip().lower()
-    if s in {"1", "true", "yes", "y", "si", "sí", "x"}:
-        return True
-    if s in {"0", "false", "no", "n", ""}:
-        return False
-    raise ValueError(f"Valor de status no reconocido: {v!r}")

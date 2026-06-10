@@ -4,12 +4,11 @@ Revision ID: 20260609_0001
 Revises:
 Create Date: 2026-06-09 12:00:00
 
-Schema definitivo tras feedback de Javier 2026-06-09:
-- Sin tabla `tenants` — `tenant_id` queda como int simple.
-  Qapp manda el tenant_id en el body de cada request.
-- `status_reason` reducido a `ACTIVE` / `INACTIVE`.
-- `tenant_name` opcional en employees (campo informativo para el
-  Excel y para el response del /validate).
+Schema definitivo confirmado con Javier 2026-06-09 21:03:
+- Sin tabla `tenants`.
+- `status` es VARCHAR(16) con valores "Active" / "Inactive".
+- `status_reason` es VARCHAR(100) nullable (texto libre).
+- Sin `cost_center`.
 """
 from typing import Sequence, Union
 
@@ -39,17 +38,11 @@ def upgrade() -> None:
         sa.Column("full_name", sa.String(length=100), nullable=False),
         sa.Column(
             "status",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("true"),
-        ),
-        sa.Column(
-            "status_reason",
             sa.String(length=16),
             nullable=False,
-            server_default="ACTIVE",
+            server_default="Active",
         ),
-        sa.Column("cost_center", sa.String(length=100), nullable=True),
+        sa.Column("status_reason", sa.String(length=100), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

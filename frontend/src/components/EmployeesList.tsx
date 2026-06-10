@@ -47,9 +47,9 @@ export function EmployeesList() {
               <Th>Código</Th>
               <Th>Documento</Th>
               <Th>Nombre</Th>
+              <Th>Tenant</Th>
               <Th>Estado</Th>
               <Th>Motivo</Th>
-              <Th>Centro de costo</Th>
             </tr>
           </thead>
           <tbody>
@@ -67,28 +67,33 @@ export function EmployeesList() {
                 </td>
               </tr>
             )}
-            {query.data?.items.map((e) => (
-              <tr key={e.id} className="border-t border-slate-100">
-                <Td mono>{e.employeeCode}</Td>
-                <Td mono>{e.documentNumber}</Td>
-                <Td>{e.fullName}</Td>
-                <Td>
-                  <span
-                    className={
-                      e.status
-                        ? "rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs font-medium"
-                        : "rounded-full bg-red-100 text-red-800 px-2 py-0.5 text-xs font-medium"
-                    }
-                  >
-                    {e.status ? "ACTIVO" : "INACTIVO"}
-                  </span>
-                </Td>
-                <Td>
-                  <span className="text-slate-500">{e.statusReason}</span>
-                </Td>
-                <Td>{e.costCenter ?? "—"}</Td>
-              </tr>
-            ))}
+            {query.data?.items.map((e) => {
+              const active = (e.status || "").toLowerCase() === "active";
+              return (
+                <tr key={e.id} className="border-t border-slate-100">
+                  <Td mono>{e.employeeCode}</Td>
+                  <Td mono>{e.documentNumber}</Td>
+                  <Td>{e.fullName}</Td>
+                  <Td>{e.tenantName ?? "—"}</Td>
+                  <Td>
+                    <span
+                      className={
+                        active
+                          ? "rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs font-medium"
+                          : "rounded-full bg-red-100 text-red-800 px-2 py-0.5 text-xs font-medium"
+                      }
+                    >
+                      {e.status.toUpperCase()}
+                    </span>
+                  </Td>
+                  <Td>
+                    <span className="text-slate-500">
+                      {e.statusReason ?? "—"}
+                    </span>
+                  </Td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

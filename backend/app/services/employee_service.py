@@ -57,8 +57,7 @@ async def upsert_employees(
             "document_type": r.document_type.value,
             "full_name": r.full_name,
             "status": r.status,
-            "status_reason": r.status_reason.value,
-            "cost_center": r.cost_center,
+            "status_reason": r.status_reason,
         }
         for r in rows
     ]
