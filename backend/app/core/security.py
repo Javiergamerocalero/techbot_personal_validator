@@ -20,9 +20,17 @@ async def require_admin(
     x_admin_token: Annotated[str | None, Header()] = None,
 ) -> None:
     expected = get_settings().admin_token
-    if not x_admin_token or not secrets.compare_digest(
-        x_admin_token.strip(), expected
-    ):
+    if not x_admin_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin token",
+        )
+    # Comparamos en bytes para evitar el TypeError de
+    # `compare_digest` cuando entran caracteres non-ASCII en el
+    # header (ej. paste con NBSP o guiones tipográficos).
+    received = x_admin_token.strip().encode("utf-8")
+    expected_bytes = expected.encode("utf-8")
+    if not secrets.compare_digest(received, expected_bytes):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid admin token",
