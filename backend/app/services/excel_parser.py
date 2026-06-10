@@ -128,7 +128,13 @@ def parse_xlsx(
             ],
         )
 
-    ws = wb.active
+    # Buscar la hoja "Empleados" por nombre. Si el operador guardó el
+    # archivo con la pestaña "Catalogos" activa, `.active` apuntaría a
+    # la equivocada y el parser leería un encabezado que no es.
+    if "Empleados" in wb.sheetnames:
+        ws = wb["Empleados"]
+    else:
+        ws = wb.active
     if ws is None:
         return [], [
             ImportErrorSchema(row=0, column=None, reason="Hoja vacía")
