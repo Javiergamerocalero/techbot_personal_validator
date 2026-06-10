@@ -9,7 +9,7 @@ from app import __version__
 from app.core.config import get_settings
 from app.core.database import dispose_engine
 from app.core.logging import configure_logging
-from app.routers import employees, health, tenants
+from app.routers import employees, health
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +47,6 @@ def create_app() -> FastAPI:
     prefix = "/api/v1"
     app.include_router(health.router, prefix=prefix, tags=["health"])
     app.include_router(employees.router, prefix=prefix, tags=["employees"])
-    app.include_router(tenants.router, prefix=prefix, tags=["tenants"])
     return app
 
 

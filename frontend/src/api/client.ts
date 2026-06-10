@@ -1,27 +1,41 @@
 /**
- * Cliente HTTP tipado contra el backend. Auth por X-Tenant-Key,
- * la key se guarda en localStorage para no preguntarla cada refresh.
+ * Cliente HTTP tipado contra el backend.
+ *
+ * Cambio Javier 2026-06-09: no hay API key por tenant. La admin
+ * web pide:
+ *   - X-Admin-Token (header, lo emite Yago)
+ *   - tenantId (numérico — ej. 22 para San Fernando, sucursal del 20)
+ * Ambos se guardan en localStorage para no preguntarlos cada refresh.
  */
 import type { EmployeeListResponse, ImportSummary } from "@/types";
 
 const BASE = "/api/v1";
-const TENANT_KEY_STORAGE = "qapp.tenantKey";
+const ADMIN_TOKEN_KEY = "qapp.adminToken";
+const TENANT_ID_KEY = "qapp.tenantId";
 
-export function getTenantKey(): string | null {
-  return localStorage.getItem(TENANT_KEY_STORAGE);
+export function getAdminToken(): string | null {
+  return localStorage.getItem(ADMIN_TOKEN_KEY);
+}
+export function setAdminToken(token: string): void {
+  localStorage.setItem(ADMIN_TOKEN_KEY, token);
 }
 
-export function setTenantKey(key: string): void {
-  localStorage.setItem(TENANT_KEY_STORAGE, key);
+export function getTenantId(): number | null {
+  const v = localStorage.getItem(TENANT_ID_KEY);
+  return v ? Number(v) : null;
+}
+export function setTenantId(id: number): void {
+  localStorage.setItem(TENANT_ID_KEY, String(id));
 }
 
-export function clearTenantKey(): void {
-  localStorage.removeItem(TENANT_KEY_STORAGE);
+export function clearCredentials(): void {
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  localStorage.removeItem(TENANT_ID_KEY);
 }
 
-function authHeaders(): Record<string, string> {
-  const key = getTenantKey();
-  return key ? { "X-Tenant-Key": key } : {};
+function adminHeaders(): Record<string, string> {
+  const t = getAdminToken();
+  return t ? { "X-Admin-Token": t } : {};
 }
 
 async function unwrap<T>(res: Response): Promise<T> {
@@ -41,7 +55,7 @@ async function unwrap<T>(res: Response): Promise<T> {
 export const api = {
   async downloadTemplate(): Promise<Blob> {
     const res = await fetch(`${BASE}/employees/template.xlsx`, {
-      headers: { ...authHeaders() },
+      headers: { ...adminHeaders() },
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: no se pudo descargar la plantilla`);
@@ -49,28 +63,27 @@ export const api = {
     return res.blob();
   },
 
-  async importEmployees(file: File): Promise<ImportSummary> {
+  async importEmployees(file: File, tenantId: number): Promise<ImportSummary> {
     const form = new FormData();
     form.append("file", file);
-    const res = await fetch(`${BASE}/employees/import`, {
-      method: "POST",
-      headers: { ...authHeaders() },
-      body: form,
-    });
+    const res = await fetch(
+      `${BASE}/employees/import?tenantId=${tenantId}`,
+      { method: "POST", headers: { ...adminHeaders() }, body: form }
+    );
     return unwrap<ImportSummary>(res);
   },
 
-  async listEmployees(params?: {
-    limit?: number;
-    offset?: number;
-    q?: string;
-  }): Promise<EmployeeListResponse> {
+  async listEmployees(
+    tenantId: number,
+    params?: { limit?: number; offset?: number; q?: string }
+  ): Promise<EmployeeListResponse> {
     const qs = new URLSearchParams();
+    qs.set("tenantId", String(tenantId));
     if (params?.limit) qs.set("limit", String(params.limit));
     if (params?.offset) qs.set("offset", String(params.offset));
     if (params?.q) qs.set("q", params.q);
     const res = await fetch(`${BASE}/employees?${qs.toString()}`, {
-      headers: { ...authHeaders() },
+      headers: { ...adminHeaders() },
     });
     return unwrap<EmployeeListResponse>(res);
   },

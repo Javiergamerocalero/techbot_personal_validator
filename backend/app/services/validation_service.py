@@ -1,9 +1,4 @@
-"""Lógica del endpoint /validate.
-
-Resuelve el employee + decide si autorizar + persiste el log de
-auditoría. Separado del router para que sea fácil testear sin
-montar FastAPI.
-"""
+"""Lógica del endpoint /validate."""
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,9 +13,7 @@ from app.services.employee_service import find_employee
 
 log = logging.getLogger(__name__)
 
-
 _MSG_AUTHORIZED = "Empleado validado"
-_MSG_NOT_FOUND = "Empleado no autorizado para realizar compras"
 _MSG_NOT_AUTHORIZED = "Empleado no autorizado para realizar compras"
 
 
@@ -36,7 +29,7 @@ async def validate_employee(
 
     Devuelve la respuesta lista para serializar + persiste el log.
     El caller solo tiene que `await session.commit()` para cerrar el
-    write — leerlo NO requiere commit, escribir el log SÍ.
+    write.
     """
     employee = await find_employee(
         session, tenant_id, identifier_type, identifier
@@ -53,7 +46,7 @@ async def validate_employee(
             employee_id=None,
         )
         return ValidateResponse(
-            success=False, employee=None, message=_MSG_NOT_FOUND
+            success=False, employee=None, message=_MSG_NOT_AUTHORIZED
         )
 
     if not employee.status:
@@ -67,9 +60,7 @@ async def validate_employee(
             employee_id=employee.id,
         )
         return ValidateResponse(
-            success=False,
-            employee=None,
-            message=_MSG_NOT_AUTHORIZED,
+            success=False, employee=None, message=_MSG_NOT_AUTHORIZED
         )
 
     await _log(

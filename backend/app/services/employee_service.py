@@ -51,6 +51,7 @@ async def upsert_employees(
     payload = [
         {
             "tenant_id": tenant_id,
+            "tenant_name": r.tenant_name,
             "employee_code": r.employee_code,
             "document_number": r.document_number,
             "document_type": r.document_type.value,

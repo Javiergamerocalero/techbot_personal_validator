@@ -28,6 +28,7 @@ HEADERS = [
     "status",
     "status_reason",
     "cost_center",
+    "tenant_name",
 ]
 
 _DOC_TYPES = [t.value for t in DocumentType]
@@ -94,6 +95,7 @@ def build_template_xlsx() -> bytes:
             True,
             "ACTIVE",
             "PLANTA CHORRILLOS",
+            "San Fernando",
         ]
     )
 
@@ -182,6 +184,7 @@ def parse_xlsx(
                     row[header_map["status_reason"]], "ACTIVE"
                 ),
                 "cost_center": _str_or_none(row[header_map["cost_center"]]),
+                "tenant_name": _str_or_none(row[header_map["tenant_name"]]),
             }
             parsed = EmployeeImportRow.model_validate(data)
             valid.append(parsed)

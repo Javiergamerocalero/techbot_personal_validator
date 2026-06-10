@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/api/client";
+import { api, getTenantId } from "@/api/client";
 import type { ImportSummary } from "@/types";
 
 interface Props {
@@ -28,7 +28,11 @@ export function ExcelUploader({ onImported }: Props) {
   });
 
   const importMutation = useMutation({
-    mutationFn: () => api.importEmployees(file!),
+    mutationFn: () => {
+      const tid = getTenantId();
+      if (!tid) throw new Error("tenant_id no configurado");
+      return api.importEmployees(file!, tid);
+    },
     onSuccess: (summary) => {
       setResult(summary);
       if (summary.failed === 0) onImported();
@@ -55,9 +59,8 @@ export function ExcelUploader({ onImported }: Props) {
             Cargar empleados
           </h2>
           <p className="text-sm text-slate-500">
-            Descargá la plantilla, completala con tus colaboradores y
-            subila acá. Las filas con error se muestran al lado para que
-            las corrijas.
+            Tenant actual: <strong>{getTenantId()}</strong>. Descargá la
+            plantilla, completala con tus colaboradores y subila acá.
           </p>
         </div>
         <button

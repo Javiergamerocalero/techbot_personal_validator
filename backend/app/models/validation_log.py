@@ -15,6 +15,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
+    Integer,
     String,
     func,
 )
@@ -40,11 +41,9 @@ class ValidationLog(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
 
-    tenant_id: Mapped[int] = mapped_column(
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
+    # tenant_id sin FK — Qapp manda el tenant en cada request, no
+    # tenemos tabla `tenants` que valide.
+    tenant_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
 
     identifier_type: Mapped[IdentifierType] = mapped_column(
         Enum(IdentifierType, name="identifier_type", native_enum=False),

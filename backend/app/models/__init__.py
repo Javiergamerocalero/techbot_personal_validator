@@ -4,7 +4,6 @@ from app.models.employee import (  # noqa: F401
     Employee,
     StatusReason,
 )
-from app.models.tenant import Tenant  # noqa: F401
 from app.models.validation_log import (  # noqa: F401
     IdentifierType,
     ValidationLog,

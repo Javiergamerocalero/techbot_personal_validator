@@ -1,8 +1,12 @@
 """Employee + enums asociados.
 
-Schema definido con Javier 2026-06-09. Multi-tenant: cada empleado
-pertenece a un tenant. Búsqueda principal por (tenant_id, document_number)
-y (tenant_id, employee_code).
+Schema simplificado tras feedback de Javier 2026-06-09:
+- `tenant_id` queda como int simple (sin FK) — Qapp manda el
+  tenant_id en cada request, no hay tabla `tenants` que validar.
+- `status_reason` reducido a ACTIVE / INACTIVE (era catálogo de 5
+  valores; el cliente prefiere no complicar).
+- Búsqueda principal por (tenant_id, document_number) y
+  (tenant_id, employee_code).
 """
 import enum
 from datetime import datetime
@@ -12,42 +16,28 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Enum,
-    ForeignKey,
     Index,
+    Integer,
     String,
     UniqueConstraint,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 
 
 class DocumentType(str, enum.Enum):
-    """Tipos de documento aceptados en `document_number`.
-
-    Si el cliente trae solo DNI ahora, la lista se queda en eso y se
-    extiende cuando aparezca otro caso.
-    """
-
     DNI = "DNI"
     CE = "CE"  # Carné de Extranjería
     PASSPORT = "PASSPORT"
 
 
 class StatusReason(str, enum.Enum):
-    """Catálogo cerrado de razones de estado (Javier 2026-06-09).
-
-    Mantener acotado — la lista exacta la confirma Javier antes del
-    despliegue. Los valores acá son un placeholder razonable; si
-    cambian se agrega una migration que cambia el enum.
-    """
+    """Catálogo cerrado, confirmado por Javier 2026-06-09."""
 
     ACTIVE = "ACTIVE"
-    DESVINCULADO = "DESVINCULADO"
-    SUSPENDIDO = "SUSPENDIDO"
-    VACACIONES = "VACACIONES"
-    OTRO = "OTRO"
+    INACTIVE = "INACTIVE"
 
 
 class Employee(Base):
@@ -55,11 +45,11 @@ class Employee(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
 
-    tenant_id: Mapped[int] = mapped_column(
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
+    # Sin FK: Qapp identifica al tenant y lo manda en el body del
+    # request. Si necesitamos rastrear orígenes de cada tenant
+    # agregamos una tabla separada después.
+    tenant_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    tenant_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     employee_code: Mapped[str] = mapped_column(String(64), nullable=False)
     document_number: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -71,8 +61,6 @@ class Employee(Base):
 
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    # Bool de autorización inmediata: si False el empleado NO puede
-    # comprar (independiente de status_reason).
     status: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
     )
@@ -94,20 +82,13 @@ class Employee(Base):
         nullable=False,
     )
 
-    tenant = relationship("Tenant", lazy="joined")
-
     __table_args__ = (
-        # Unicidad fuerte: dentro de un tenant, no puede haber dos
-        # empleados con el mismo código ni con el mismo documento.
         UniqueConstraint(
             "tenant_id", "employee_code", name="uq_employee_tenant_code"
         ),
         UniqueConstraint(
             "tenant_id", "document_number", name="uq_employee_tenant_doc"
         ),
-        # Índices compuestos para los lookups del /validate. Postgres
-        # ya usa el unique para el filter, pero los dejamos explícitos
-        # para que el plan sea predecible y por consistencia.
         Index("ix_employee_tenant_code", "tenant_id", "employee_code"),
         Index("ix_employee_tenant_doc", "tenant_id", "document_number"),
     )

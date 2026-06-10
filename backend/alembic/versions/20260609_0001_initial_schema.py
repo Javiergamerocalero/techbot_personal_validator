@@ -1,8 +1,15 @@
-"""initial schema — tenants, employees, validation_logs
+"""initial schema — employees + validation_logs
 
 Revision ID: 20260609_0001
 Revises:
 Create Date: 2026-06-09 12:00:00
+
+Schema definitivo tras feedback de Javier 2026-06-09:
+- Sin tabla `tenants` — `tenant_id` queda como int simple.
+  Qapp manda el tenant_id en el body de cada request.
+- `status_reason` reducido a `ACTIVE` / `INACTIVE`.
+- `tenant_name` opcional en employees (campo informativo para el
+  Excel y para el response del /validate).
 """
 from typing import Sequence, Union
 
@@ -17,39 +24,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.create_table(
-        "tenants",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("name", sa.String(length=100), nullable=False),
-        sa.Column("slug", sa.String(length=64), nullable=False),
-        sa.Column("api_key_hash", sa.String(length=64), nullable=False),
-        sa.Column(
-            "is_active",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("true"),
-        ),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
-        sa.UniqueConstraint("slug", name="uq_tenants_slug"),
-        sa.UniqueConstraint("api_key_hash", name="uq_tenants_api_key_hash"),
-    )
-    op.create_index("ix_tenants_slug", "tenants", ["slug"])
-    op.create_index("ix_tenants_api_key_hash", "tenants", ["api_key_hash"])
-
-    op.create_table(
         "employees",
         sa.Column("id", sa.BigInteger(), primary_key=True),
         sa.Column("tenant_id", sa.Integer(), nullable=False),
+        sa.Column("tenant_name", sa.String(length=100), nullable=True),
         sa.Column("employee_code", sa.String(length=64), nullable=False),
         sa.Column("document_number", sa.String(length=32), nullable=False),
         sa.Column(
@@ -67,7 +45,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "status_reason",
-            sa.String(length=32),
+            sa.String(length=16),
             nullable=False,
             server_default="ACTIVE",
         ),
@@ -83,9 +61,6 @@ def upgrade() -> None:
             sa.DateTime(timezone=True),
             server_default=sa.func.now(),
             nullable=False,
-        ),
-        sa.ForeignKeyConstraint(
-            ["tenant_id"], ["tenants.id"], ondelete="CASCADE"
         ),
         sa.UniqueConstraint(
             "tenant_id", "employee_code", name="uq_employee_tenant_code"
@@ -118,9 +93,6 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.ForeignKeyConstraint(
-            ["tenant_id"], ["tenants.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
             ["employee_id"], ["employees.id"], ondelete="SET NULL"
         ),
     )
@@ -142,6 +114,3 @@ def downgrade() -> None:
     op.drop_index("ix_employee_tenant_code", table_name="employees")
     op.drop_index("ix_employees_tenant_id", table_name="employees")
     op.drop_table("employees")
-    op.drop_index("ix_tenants_api_key_hash", table_name="tenants")
-    op.drop_index("ix_tenants_slug", table_name="tenants")
-    op.drop_table("tenants")

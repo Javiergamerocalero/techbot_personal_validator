@@ -1,16 +1,22 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearTenantKey, getTenantKey } from "@/api/client";
+import {
+  clearCredentials,
+  getAdminToken,
+  getTenantId,
+} from "@/api/client";
 import { TenantKeyGate } from "@/components/TenantKeyGate";
 import { ExcelUploader } from "@/components/ExcelUploader";
 import { EmployeesList } from "@/components/EmployeesList";
 
 export default function App() {
-  const [hasKey, setHasKey] = useState(Boolean(getTenantKey()));
+  const [authed, setAuthed] = useState(
+    Boolean(getAdminToken() && getTenantId())
+  );
   const qc = useQueryClient();
 
-  if (!hasKey) {
-    return <TenantKeyGate onSet={() => setHasKey(true)} />;
+  if (!authed) {
+    return <TenantKeyGate onSet={() => setAuthed(true)} />;
   }
 
   return (
@@ -18,20 +24,21 @@ export default function App() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">
-            Qapp · Empleados
+            Validador de Empleados
           </h1>
           <p className="text-slate-500 text-sm">
-            Carga masiva de colaboradores autorizados.
+            Tenant <strong>{getTenantId()}</strong> · Carga masiva de
+            colaboradores autorizados.
           </p>
         </div>
         <button
           onClick={() => {
-            clearTenantKey();
-            setHasKey(false);
+            clearCredentials();
+            setAuthed(false);
           }}
           className="text-sm text-slate-500 hover:text-slate-700"
         >
-          Cambiar tenant
+          Cambiar credenciales
         </button>
       </header>
 

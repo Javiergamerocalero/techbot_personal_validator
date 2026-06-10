@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/api/client";
+import { api, getTenantId } from "@/api/client";
 
 const PAGE_SIZE = 50;
 
 export function EmployeesList() {
   const [page, setPage] = useState(0);
   const [q, setQ] = useState("");
+  const tenantId = getTenantId();
 
   const query = useQuery({
-    queryKey: ["employees", page, q],
+    queryKey: ["employees", tenantId, page, q],
+    enabled: tenantId !== null,
     queryFn: () =>
-      api.listEmployees({
+      api.listEmployees(tenantId!, {
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
         q: q.trim() || undefined,

@@ -1,8 +1,4 @@
-"""Pydantic schemas para Employee.
-
-In: ValidateRequest, EmployeeImportRow.
-Out: ValidateResponse, EmployeeOut, EmployeeListResponse.
-"""
+"""Pydantic schemas para Employee."""
 from datetime import datetime
 from typing import Annotated
 
@@ -16,14 +12,20 @@ from app.models.validation_log import IdentifierType
 class ValidateRequest(BaseModel):
     """Lo que manda Qapp para validar un empleado.
 
-    Shape exacto del documento original de Javier:
-        { "identifierType": "DNI", "identifier": "12345678" }
+    Post-cambio Javier 2026-06-09: el tenant_id viene en el body
+    (antes se derivaba de X-Tenant-Key). El endpoint queda público
+    porque Qapp ya asegura la comunicación desde su lado.
+
+    Body shape:
+        {
+          "tenantId": 22,
+          "identifierType": "DNI",
+          "identifier": "12345678"
+        }
     """
 
-    identifier_type: IdentifierType = Field(
-        alias="identifierType",
-        description="DNI o EMPLOYEE_CODE — define qué columna se consulta",
-    )
+    tenant_id: int = Field(alias="tenantId", gt=0)
+    identifier_type: IdentifierType = Field(alias="identifierType")
     identifier: Annotated[str, Field(min_length=1, max_length=64)]
 
     model_config = ConfigDict(populate_by_name=True)
@@ -36,14 +38,13 @@ class ValidateRequest(BaseModel):
 
 # ── Out ─────────────────────────────────────────────────────────────────
 class EmployeeOut(BaseModel):
-    """Versión consumible del empleado, alineada con el doc de Javier."""
-
     employee_code: str = Field(alias="employeeCode")
     document_number: str = Field(alias="documentNumber")
     full_name: str = Field(alias="fullName")
     status: bool
     status_reason: StatusReason = Field(alias="statusReason")
     cost_center: str | None = Field(default=None, alias="costCenter")
+    tenant_name: str | None = Field(default=None, alias="tenantName")
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
@@ -58,6 +59,8 @@ class ValidateResponse(BaseModel):
 
 class EmployeeListItem(BaseModel):
     id: int
+    tenant_id: int = Field(alias="tenantId")
+    tenant_name: str | None = Field(default=None, alias="tenantName")
     employee_code: str = Field(alias="employeeCode")
     document_number: str = Field(alias="documentNumber")
     document_type: DocumentType = Field(alias="documentType")
@@ -77,7 +80,7 @@ class EmployeeListResponse(BaseModel):
 
 # ── Import ──────────────────────────────────────────────────────────────
 class EmployeeImportRow(BaseModel):
-    """Una fila válida del Excel — el parser convierte cada row a esto."""
+    """Una fila válida del Excel."""
 
     employee_code: str
     document_number: str
@@ -86,19 +89,16 @@ class EmployeeImportRow(BaseModel):
     status: bool = True
     status_reason: StatusReason = StatusReason.ACTIVE
     cost_center: str | None = None
+    tenant_name: str | None = None
 
 
 class ImportError(BaseModel):
-    """Una fila que el parser rechazó. Muestra al usuario qué corregir."""
-
     row: int
     column: str | None = None
     reason: str
 
 
 class ImportSummary(BaseModel):
-    """Respuesta del POST /employees/import."""
-
     received: int
     inserted: int
     updated: int
