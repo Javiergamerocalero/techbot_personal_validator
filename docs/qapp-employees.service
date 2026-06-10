@@ -1,0 +1,19 @@
+[Unit]
+Description=Qapp Employee Validation Service (FastAPI)
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=techbot
+Group=techbot
+WorkingDirectory=/home/techbot/qapp-employee-validation-service/backend
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/techbot/qapp-employee-validation-service/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8001 --workers 2
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/qapp-employees.out.log
+StandardError=append:/var/log/qapp-employees.err.log
+
+[Install]
+WantedBy=multi-user.target

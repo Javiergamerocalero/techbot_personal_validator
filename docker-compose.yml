@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: qapp_employees_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-qapp_employees}
+      POSTGRES_USER: ${POSTGRES_USER:-qapp_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      # Bind solo a localhost — el backend Python corre en el host
+      # y se conecta como 127.0.0.1:5433. Cambié el puerto host a
+      # 5433 para no chocar con cualquier Postgres del sistema si
+      # apareciera más adelante.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - qapp_employees_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qapp_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  qapp_employees_data:
+    name: qapp_employees_data

@@ -7,7 +7,7 @@ detección de tty.
 import logging
 import sys
 
-from pythonjsonlogger.json import JsonFormatter
+from pythonjsonlogger.jsonlogger import JsonFormatter
 
 from app.core.config import get_settings
 

@@ -15,6 +15,9 @@
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.5"
   },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.0.0"
+  },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
     "@types/react": "^19.0.0",
