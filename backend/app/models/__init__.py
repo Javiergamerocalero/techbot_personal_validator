@@ -6,6 +6,7 @@ from app.models.employee import (  # noqa: F401
     DocumentType,
     Employee,
 )
+from app.models.purchase import Purchase  # noqa: F401
 from app.models.validation_log import (  # noqa: F401
     IdentifierType,
     ValidationLog,
