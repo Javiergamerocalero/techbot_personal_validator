@@ -43,6 +43,10 @@ class ValidateRequest(BaseModel):
 
 # ── Out ─────────────────────────────────────────────────────────────────
 class EmployeeOut(BaseModel):
+    # id agregado 2026-08-06 para que el kiosco San Fernando pueda
+    # registrar compras contra POST /employees/{id}/purchases sin
+    # tener que hacer un lookup adicional por (tenant, code).
+    id: int
     employee_code: str = Field(alias="employeeCode")
     document_number: str = Field(alias="documentNumber")
     full_name: str = Field(alias="fullName")
