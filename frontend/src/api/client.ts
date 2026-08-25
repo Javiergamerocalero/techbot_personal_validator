@@ -7,7 +7,13 @@
  *   - tenantId (numérico — ej. 22 para San Fernando, sucursal del 20)
  * Ambos se guardan en localStorage para no preguntarlos cada refresh.
  */
-import type { EmployeeListResponse, ImportSummary } from "@/types";
+import type {
+  EmployeeListItem,
+  EmployeeListResponse,
+  EmployeeUpdatePayload,
+  ImportSummary,
+  TenantListResponse,
+} from "@/types";
 
 const BASE = "/api/v1";
 const ADMIN_TOKEN_KEY = "qapp.adminToken";
@@ -75,16 +81,77 @@ export const api = {
 
   async listEmployees(
     tenantId: number,
-    params?: { limit?: number; offset?: number; q?: string }
+    params?: {
+      limit?: number;
+      offset?: number;
+      q?: string;
+      tenantName?: string | null;
+    }
   ): Promise<EmployeeListResponse> {
     const qs = new URLSearchParams();
     qs.set("tenantId", String(tenantId));
     if (params?.limit) qs.set("limit", String(params.limit));
     if (params?.offset) qs.set("offset", String(params.offset));
     if (params?.q) qs.set("q", params.q);
+    if (params?.tenantName !== undefined && params.tenantName !== null) {
+      // cadena vacía = "empleados sin nombre de tenant" (backend
+      // acepta explícitamente ese caso — no lo confundas con "no
+      // enviar el param", que es tenantName === null / undefined).
+      qs.set("tenantName", params.tenantName);
+    }
     const res = await fetch(`${BASE}/employees?${qs.toString()}`, {
       headers: { ...adminHeaders() },
     });
     return unwrap<EmployeeListResponse>(res);
+  },
+
+  async listTenants(tenantId: number): Promise<TenantListResponse> {
+    const qs = new URLSearchParams({ tenantId: String(tenantId) });
+    const res = await fetch(
+      `${BASE}/employees/tenants?${qs.toString()}`,
+      { headers: { ...adminHeaders() } }
+    );
+    return unwrap<TenantListResponse>(res);
+  },
+
+  async updateEmployee(
+    tenantId: number,
+    employeeId: number,
+    payload: EmployeeUpdatePayload
+  ): Promise<EmployeeListItem> {
+    const qs = new URLSearchParams({ tenantId: String(tenantId) });
+    const res = await fetch(
+      `${BASE}/employees/${employeeId}?${qs.toString()}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...adminHeaders(),
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+    return unwrap<EmployeeListItem>(res);
+  },
+
+  async deleteEmployee(
+    tenantId: number,
+    employeeId: number
+  ): Promise<void> {
+    const qs = new URLSearchParams({ tenantId: String(tenantId) });
+    const res = await fetch(
+      `${BASE}/employees/${employeeId}?${qs.toString()}`,
+      { method: "DELETE", headers: { ...adminHeaders() } }
+    );
+    if (!res.ok && res.status !== 204) {
+      let detail: string;
+      try {
+        const data = await res.json();
+        detail = data?.detail || JSON.stringify(data);
+      } catch {
+        detail = await res.text();
+      }
+      throw new Error(`HTTP ${res.status}: ${detail}`);
+    }
   },
 };

@@ -30,3 +30,22 @@ export interface EmployeeListResponse {
   total: number;
   items: EmployeeListItem[];
 }
+
+export interface EmployeeUpdatePayload {
+  employeeCode?: string;
+  documentNumber?: string;
+  documentType?: string;
+  fullName?: string;
+  status?: string;
+  statusReason?: string | null;
+  tenantName?: string | null;
+}
+
+export interface TenantSummary {
+  tenantName: string | null;
+  count: number;
+}
+
+export interface TenantListResponse {
+  items: TenantSummary[];
+}
