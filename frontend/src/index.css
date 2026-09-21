@@ -1,1 +1,27 @@
 @import "tailwindcss";
+
+@layer components {
+  /* Estilo compartido para los inputs/selects de los modales de
+     edición del EmployeesList (Javier 2026-08-25). No usamos la
+     directiva @apply para no depender del setup PostCSS específico
+     del proyecto — todas las propiedades van planas. */
+  .input {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    background-color: #ffffff;
+    color: #0f172a;
+  }
+  .input:focus {
+    outline: 2px solid #6366f1;
+    outline-offset: -1px;
+    border-color: transparent;
+  }
+  .input:disabled {
+    background-color: #f1f5f9;
+    opacity: 0.7;
+  }
+}
