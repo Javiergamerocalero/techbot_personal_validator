@@ -14,7 +14,12 @@ export function TenantKeyGate({ onSet }: { onSet: () => void }) {
     setPidiendo(true);
     setAviso(null);
     try {
-      const r = await api.requestAdminToken();
+      // Se manda el tenant que el operador tiene escrito, para que el
+      // correo indique de qué cliente se trata.
+      const tid = Number(tenantId.trim());
+      const r = await api.requestAdminToken(
+        Number.isFinite(tid) && tid > 0 ? tid : null
+      );
       setAviso(r.message);
     } catch {
       setAviso(

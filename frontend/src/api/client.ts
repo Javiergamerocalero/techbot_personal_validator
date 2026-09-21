@@ -118,9 +118,16 @@ export const api = {
   /** Pide un token nuevo. El token NO vuelve en la respuesta: se le
    *  envía por correo a TECHBOT. Por eso no lleva cabecera de auth:
    *  se usa justo cuando no se tiene un token válido. */
-  async requestAdminToken(): Promise<AdminTokenRequestResponse> {
+  async requestAdminToken(
+    tenantId?: number | null
+  ): Promise<AdminTokenRequestResponse> {
+    // El tenant va solo para que el correo diga con qué cliente estaba
+    // trabajando quien pidió el token. No decide nada: el destinatario
+    // es fijo del lado del servidor.
     const res = await fetch(`${BASE}/admin-token/request`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: tenantId ?? null }),
     });
     return unwrap<AdminTokenRequestResponse>(res);
   },

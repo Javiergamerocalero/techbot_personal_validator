@@ -23,7 +23,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_session
-from app.schemas.admin_token import AdminTokenRequestResponse
+from app.schemas.admin_token import (
+    AdminTokenRequest,
+    AdminTokenRequestResponse,
+)
 from app.services.admin_token_service import (
     generar_token,
     segundos_para_poder_generar,
@@ -53,6 +56,7 @@ MENSAJE_AL_USUARIO = (
 async def request_token(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
+    datos: AdminTokenRequest | None = None,
 ) -> AdminTokenRequestResponse:
     cfg = get_settings()
 
@@ -76,10 +80,12 @@ async def request_token(
         session, enviado_a=destino, pedido_desde=origen
     )
 
+    tenant = datos.tenant_id if datos else None
     cuerpo = (
-        "Se generó un token nuevo para el panel de empleados "
-        "(Validador de Empleados).\n\n"
-        f"Token: {token}\n\n"
+        "Un usuario de la webapp de validación de usuarios de TECHBOT "
+        "generó un token de administración.\n\n"
+        f"Tenant: {tenant if tenant is not None else 'no indicado'}\n"
+        f"Token: {token}\n"
         f"Pedido desde: {origen or 'desconocido'}\n\n"
         "El token anterior generado desde el panel deja de servir. "
         "La llave de respaldo del servidor (ADMIN_TOKEN del .env) sigue "
@@ -88,7 +94,10 @@ async def request_token(
 
     try:
         enviar(
-            asunto="Validador de Empleados · token de administración",
+            asunto=(
+                "Validador de Empleados · token de administración"
+                + (f" · tenant {tenant}" if tenant is not None else "")
+            ),
             cuerpo=cuerpo,
             destinatario=destino,
         )
