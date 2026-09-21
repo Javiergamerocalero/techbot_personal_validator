@@ -53,6 +53,10 @@ class EmployeeOut(BaseModel):
     status: str
     status_reason: str | None = Field(default=None, alias="statusReason")
     tenant_name: str | None = Field(default=None, alias="tenantName")
+    # Tope de consumo en céntimos; None = sin tope.
+    purchase_limit_cents: int | None = Field(
+        default=None, alias="purchaseLimitCents"
+    )
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
@@ -75,6 +79,9 @@ class EmployeeListItem(BaseModel):
     full_name: str = Field(alias="fullName")
     status: str
     status_reason: str | None = Field(default=None, alias="statusReason")
+    purchase_limit_cents: int | None = Field(
+        default=None, alias="purchaseLimitCents"
+    )
     updated_at: datetime = Field(alias="updatedAt")
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
@@ -110,6 +117,10 @@ class EmployeeUpdateRequest(BaseModel):
     )
     tenant_name: str | None = Field(
         default=None, alias="tenantName", max_length=100
+    )
+    # 0 o vacío desde el formulario se interpreta como "sin tope".
+    purchase_limit_cents: int | None = Field(
+        default=None, alias="purchaseLimitCents", ge=0
     )
 
     model_config = ConfigDict(populate_by_name=True)

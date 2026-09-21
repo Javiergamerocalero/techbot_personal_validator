@@ -8,6 +8,7 @@
  * Ambos se guardan en localStorage para no preguntarlos cada refresh.
  */
 import type {
+  AdminTokenRequestResponse,
   EmployeeListItem,
   EmployeeListResponse,
   EmployeeUpdatePayload,
@@ -112,6 +113,16 @@ export const api = {
       { headers: { ...adminHeaders() } }
     );
     return unwrap<TenantListResponse>(res);
+  },
+
+  /** Pide un token nuevo. El token NO vuelve en la respuesta: se le
+   *  envía por correo a TECHBOT. Por eso no lleva cabecera de auth:
+   *  se usa justo cuando no se tiene un token válido. */
+  async requestAdminToken(): Promise<AdminTokenRequestResponse> {
+    const res = await fetch(`${BASE}/admin-token/request`, {
+      method: "POST",
+    });
+    return unwrap<AdminTokenRequestResponse>(res);
   },
 
   async updateEmployee(

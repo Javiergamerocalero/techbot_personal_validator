@@ -6,6 +6,7 @@ __pycache__/
 .Python
 .venv/
 venv/
+.venv-*/   # entornos que se arman para probar
 env/
 .env
 .env.local
@@ -49,3 +50,5 @@ htmlcov/
 # Local DB dumps
 *.sql.gz
 *.dump
+# Artefacto incremental de TypeScript
+*.tsbuildinfo

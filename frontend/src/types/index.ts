@@ -23,6 +23,8 @@ export interface EmployeeListItem {
   /** "Active" o "Inactive" — string libre del backend */
   status: string;
   statusReason: string | null;
+  /** Tope de consumo en céntimos; null = sin tope. */
+  purchaseLimitCents: number | null;
   updatedAt: string;
 }
 
@@ -39,6 +41,7 @@ export interface EmployeeUpdatePayload {
   status?: string;
   statusReason?: string | null;
   tenantName?: string | null;
+  purchaseLimitCents?: number | null;
 }
 
 export interface TenantSummary {
@@ -48,4 +51,9 @@ export interface TenantSummary {
 
 export interface TenantListResponse {
   items: TenantSummary[];
+}
+
+export interface AdminTokenRequestResponse {
+  success: boolean;
+  message: string;
 }

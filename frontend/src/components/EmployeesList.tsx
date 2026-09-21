@@ -10,6 +10,16 @@ const PAGE_SIZE = 50;
 // tenant"), por eso usamos un string.
 const ALL_TENANTS = "__all__" as const;
 
+/** El backend responde 401 con detail "Invalid admin token". */
+function esTokenInvalido(error: unknown): boolean {
+  const texto = error instanceof Error ? error.message : String(error ?? "");
+  return texto.includes("401") || texto.toLowerCase().includes("admin token");
+}
+
+function mensajeDeError(error: unknown): string {
+  return error instanceof Error ? error.message : "Error desconocido";
+}
+
 export function EmployeesList() {
   const tenantId = getTenantId();
   const qc = useQueryClient();
@@ -136,7 +146,28 @@ export function EmployeesList() {
                 </td>
               </tr>
             )}
+            {/* Un fallo de la consulta no puede verse igual que una lista
+                vacía: con el token equivocado la pantalla decía "no hay
+                empleados" y parecía que se habían borrado los datos
+                (Javier, 2026-09-21). */}
+            {!listQuery.isLoading && listQuery.isError && (
+              <tr>
+                <td colSpan={7} className="py-10 text-center">
+                  <p className="font-medium text-red-700">
+                    {esTokenInvalido(listQuery.error)
+                      ? "Token inválido"
+                      : "No se pudo consultar la lista"}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {esTokenInvalido(listQuery.error)
+                      ? "El servidor rechazó el token de administración. Revisá las credenciales o pedí uno nuevo."
+                      : mensajeDeError(listQuery.error)}
+                  </p>
+                </td>
+              </tr>
+            )}
             {!listQuery.isLoading &&
+              !listQuery.isError &&
               (listQuery.data?.items.length ?? 0) === 0 && (
                 <tr>
                   <td
@@ -311,6 +342,13 @@ function EditModal({
       : "Inactive",
     statusReason: employee.statusReason ?? "",
     tenantName: employee.tenantName ?? "",
+    // Se edita en soles, que es como lo piensa el operador; al backend
+    // viaja en céntimos.
+    purchaseLimitSoles:
+      employee.purchaseLimitCents === null ||
+      employee.purchaseLimitCents === undefined
+        ? ""
+        : (employee.purchaseLimitCents / 100).toFixed(2),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -335,6 +373,15 @@ function EditModal({
       changes.statusReason = form.statusReason.trim() || null;
     if ((form.tenantName || null) !== (employee.tenantName || null))
       changes.tenantName = form.tenantName.trim() || null;
+
+    const topeEscrito = form.purchaseLimitSoles.trim();
+    // Vacío = sin tope. Se manda null explícito para poder quitarlo.
+    const topeNuevo =
+      topeEscrito === ""
+        ? null
+        : Math.round(Number(topeEscrito.replace(",", ".")) * 100);
+    if (topeNuevo !== (employee.purchaseLimitCents ?? null))
+      changes.purchaseLimitCents = topeNuevo;
 
     if (Object.keys(changes).length === 0) {
       onClose();
@@ -387,6 +434,18 @@ function EditModal({
             required
           />
         </Field>
+        <Field label="Límite de compra por día (S/)">
+          <input
+            value={form.purchaseLimitSoles}
+            onChange={(e) =>
+              setForm({ ...form, purchaseLimitSoles: e.target.value })
+            }
+            className="input"
+            inputMode="decimal"
+            placeholder="Vacío = sin límite"
+          />
+        </Field>
+
         <Field label="Tenant">
           <input
             value={form.tenantName}

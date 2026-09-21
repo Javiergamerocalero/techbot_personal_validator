@@ -32,6 +32,35 @@ class Settings(BaseSettings):
         ),
     )
 
+    # ── Correo (botón de generar token del panel admin) ─────────────
+    smtp_host: str = Field(default="", description="Servidor SMTP.")
+    smtp_port: int = Field(default=587)
+    smtp_user: str = Field(default="")
+    smtp_password: str = Field(default="")
+    smtp_use_ssl: bool = Field(
+        default=False, description="SMTP directo sobre SSL (puerto 465)."
+    )
+    smtp_use_starttls: bool = Field(default=True)
+    mail_from: str = Field(default="", description="Remitente de los correos.")
+
+    admin_token_mail_to: str = Field(
+        default="",
+        description=(
+            "A quién se le manda el token generado. Es fijo a propósito: "
+            "el botón que lo dispara es público, así que el destino no "
+            "puede venir del cliente."
+        ),
+    )
+
+    admin_token_min_minutes: int = Field(
+        default=10,
+        ge=1,
+        description=(
+            "Espera mínima entre generaciones de token. Evita que alguien "
+            "rote el token en bucle y deje al administrador fuera."
+        ),
+    )
+
     cors_origins: str = Field(
         default="http://localhost:5173",
         description="Orígenes permitidos para CORS, separados por coma.",

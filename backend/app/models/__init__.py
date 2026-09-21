@@ -1,4 +1,5 @@
 """SQLAlchemy ORM models. Importar acá para que Alembic los detecte."""
+from app.models.admin_token import AdminToken  # noqa: F401
 from app.models.employee import (  # noqa: F401
     STATUS_ACTIVE,
     STATUS_INACTIVE,

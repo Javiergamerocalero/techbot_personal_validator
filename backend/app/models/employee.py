@@ -73,6 +73,13 @@ class Employee(Base):
         String(100), nullable=True
     )
 
+    # Tope de consumo del empleado, en céntimos. NULL = sin tope.
+    # Pedido por Javier el 2026-09-21: el validador ya acumulaba el
+    # gasto por persona, faltaba contra qué compararlo.
+    purchase_limit_cents: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
