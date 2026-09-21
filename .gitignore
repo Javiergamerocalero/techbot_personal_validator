@@ -6,7 +6,8 @@ __pycache__/
 .Python
 .venv/
 venv/
-.venv-*/   # entornos que se arman para probar
+# Entornos que se arman para probar
+.venv-*/
 env/
 .env
 .env.local
