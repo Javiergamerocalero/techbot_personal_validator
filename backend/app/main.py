@@ -51,6 +51,7 @@ def create_app() -> FastAPI:
         admin_token.router, prefix=prefix, tags=["admin-token"]
     )
     app.include_router(purchases.router, prefix=prefix, tags=["purchases"])
+    app.include_router(purchases.admin_router, prefix=prefix, tags=["purchases"])
     return app
 
 

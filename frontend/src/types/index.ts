@@ -57,3 +57,22 @@ export interface AdminTokenRequestResponse {
   success: boolean;
   message: string;
 }
+
+export interface PurchaseRow {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  employeeCode: string;
+  documentNumber: string;
+  amountCents: number;
+  currency: string;
+  purchasedAt: string;
+  kioskName: string | null;
+}
+
+export interface PurchaseListResponse {
+  total: number;
+  totalCents: number;
+  currency: string;
+  items: PurchaseRow[];
+}

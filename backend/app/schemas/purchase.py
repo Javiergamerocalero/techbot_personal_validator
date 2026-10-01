@@ -52,3 +52,26 @@ class TodayTotalResponse(BaseModel):
     count: int
     total_cents: int = Field(serialization_alias="totalCents")
     currency: str = "PEN"
+
+
+class PurchaseRow(BaseModel):
+    """Una compra con los datos del empleado, para la vista de admin."""
+
+    id: int
+    employee_id: int = Field(serialization_alias="employeeId")
+    employee_name: str = Field(serialization_alias="employeeName")
+    employee_code: str = Field(serialization_alias="employeeCode")
+    document_number: str = Field(serialization_alias="documentNumber")
+    amount_cents: int = Field(serialization_alias="amountCents")
+    currency: str
+    purchased_at: datetime = Field(serialization_alias="purchasedAt")
+    kiosk_name: str | None = Field(serialization_alias="kioskName")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class PurchaseListResponse(BaseModel):
+    total: int
+    total_cents: int = Field(serialization_alias="totalCents")
+    currency: str = "PEN"
+    items: list[PurchaseRow]

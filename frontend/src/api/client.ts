@@ -13,6 +13,7 @@ import type {
   EmployeeListResponse,
   EmployeeUpdatePayload,
   ImportSummary,
+  PurchaseListResponse,
   TenantListResponse,
 } from "@/types";
 
@@ -57,6 +58,25 @@ async function unwrap<T>(res: Response): Promise<T> {
     throw new Error(`HTTP ${res.status}: ${detail}`);
   }
   return res.json() as Promise<T>;
+}
+
+function purchaseQuery(
+  tenantId: number,
+  params?: {
+    dateFrom?: string;
+    dateTo?: string;
+    employeeId?: number | null;
+    limit?: number;
+    offset?: number;
+  }
+): URLSearchParams {
+  const qs = new URLSearchParams({ tenantId: String(tenantId) });
+  if (params?.dateFrom) qs.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) qs.set("dateTo", params.dateTo);
+  if (params?.employeeId) qs.set("employeeId", String(params.employeeId));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  if (params?.offset) qs.set("offset", String(params.offset));
+  return qs;
 }
 
 export const api = {
@@ -118,6 +138,36 @@ export const api = {
   /** Pide un token nuevo. El token NO vuelve en la respuesta: se le
    *  envía por correo a TECHBOT. Por eso no lleva cabecera de auth:
    *  se usa justo cuando no se tiene un token válido. */
+  // ── Compras (vista de admin) ─────────────────────────────────────
+  async listPurchases(
+    tenantId: number,
+    params?: {
+      dateFrom?: string;
+      dateTo?: string;
+      employeeId?: number | null;
+      limit?: number;
+      offset?: number;
+    }
+  ): Promise<PurchaseListResponse> {
+    const res = await fetch(
+      `${BASE}/purchases?${purchaseQuery(tenantId, params).toString()}`,
+      { headers: { ...adminHeaders() } }
+    );
+    return unwrap<PurchaseListResponse>(res);
+  },
+
+  async downloadPurchases(
+    tenantId: number,
+    params?: { dateFrom?: string; dateTo?: string; employeeId?: number | null }
+  ): Promise<Blob> {
+    const res = await fetch(
+      `${BASE}/purchases/export.xlsx?${purchaseQuery(tenantId, params).toString()}`,
+      { headers: { ...adminHeaders() } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}: no se pudo descargar`);
+    return res.blob();
+  },
+
   async requestAdminToken(
     tenantId?: number | null
   ): Promise<AdminTokenRequestResponse> {

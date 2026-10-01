@@ -101,3 +101,91 @@ async def today_total(
     result = await session.execute(stmt)
     count, total = result.one()
     return int(count), int(total), today
+
+
+def _lima_range_bounds(
+    date_from: date | None, date_to: date | None
+) -> tuple[datetime | None, datetime | None]:
+    """[start_utc, end_utc) para un rango de fechas INCLUSIVO en zona Lima.
+
+    `date_to` incluye todo su día (hasta el final), igual que lo esperaría
+    quien pide "ventas del 1 al 5": las del día 5 también.
+    """
+    start_utc = None
+    end_utc = None
+    if date_from is not None:
+        start_lima = datetime.combine(date_from, datetime.min.time(), tzinfo=_LIMA_TZ)
+        start_utc = start_lima.astimezone(timezone.utc)
+    if date_to is not None:
+        # fin exclusivo = inicio del día siguiente, así el día `date_to` entra entero
+        end_lima = datetime.combine(date_to, datetime.min.time(), tzinfo=_LIMA_TZ) + timedelta(days=1)
+        end_utc = end_lima.astimezone(timezone.utc)
+    return start_utc, end_utc
+
+
+async def list_purchases(
+    session: AsyncSession,
+    *,
+    tenant_id: int,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    employee_id: int | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[int, int, list[dict]]:
+    """Listado de compras del tenant (join con empleado) + total del rango.
+
+    Devuelve (count_total, suma_total_cents, filas). El total es sobre
+    TODO el filtro, no solo la página que se devuelve.
+    """
+    start_utc, end_utc = _lima_range_bounds(date_from, date_to)
+
+    filters = [Purchase.tenant_id == tenant_id]
+    if employee_id is not None:
+        filters.append(Purchase.employee_id == employee_id)
+    if start_utc is not None:
+        filters.append(Purchase.purchased_at >= start_utc)
+    if end_utc is not None:
+        filters.append(Purchase.purchased_at < end_utc)
+
+    totals = await session.execute(
+        select(
+            func.count(Purchase.id),
+            func.coalesce(func.sum(Purchase.amount_cents), 0),
+        ).where(*filters)
+    )
+    count, total_cents = totals.one()
+
+    rows = await session.execute(
+        select(
+            Purchase.id,
+            Purchase.employee_id,
+            Employee.full_name,
+            Employee.employee_code,
+            Employee.document_number,
+            Purchase.amount_cents,
+            Purchase.currency,
+            Purchase.purchased_at,
+            Purchase.kiosk_name,
+        )
+        .join(Employee, Employee.id == Purchase.employee_id)
+        .where(*filters)
+        .order_by(Purchase.purchased_at.desc(), Purchase.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    items = [
+        {
+            "id": r.id,
+            "employee_id": r.employee_id,
+            "employee_name": r.full_name,
+            "employee_code": r.employee_code,
+            "document_number": r.document_number,
+            "amount_cents": r.amount_cents,
+            "currency": r.currency,
+            "purchased_at": r.purchased_at,
+            "kiosk_name": r.kiosk_name,
+        }
+        for r in rows.all()
+    ]
+    return int(count), int(total_cents), items
